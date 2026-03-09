@@ -20,6 +20,7 @@ foreach ($results as $row) {
     $groupedGames[$gameName][] = $row;
 }
 $totalGames = count($groupedGames);
+$gameNames = array_keys($groupedGames);
 
 // ⚙️ ຕັ້ງຄ່າເປີເຊັນ (ໃຫ້ຕົງກັບ get_prices.php)
 $pricingCfg = app_cfg()['pricing'];
@@ -47,6 +48,9 @@ $card_percent = $pricingCfg['card_percent'];
         .modal-backdrop { z-index: 1040 !important; }
         .modal { z-index: 1050 !important; }
         .save-status { min-height: 20px; font-size: 13px; }
+        .quick-menu { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .quick-menu .menu-item { min-width: 140px; }
+        .game-card.focus-target .card { outline: 2px solid #0d6efd; box-shadow: 0 0 0 4px rgba(13,110,253,.15); }
     </style>
 </head>
 <body>
@@ -73,6 +77,67 @@ $card_percent = $pricingCfg['card_percent'];
     </nav>
 
     <div class="container pb-5">
+        <div class="card quick-menu mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h6 class="mb-0 text-primary fw-bold"><i class="fas fa-bars"></i> Quick Menu</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-info text-dark">Transfer +<?php echo $transfer_percent; ?>%</span>
+                        <span class="badge bg-secondary">Card +<?php echo $card_percent; ?>%</span>
+                        <span class="badge bg-primary"><?php echo $totalGames; ?> ເກມ</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a href="auto_update.php" target="_blank" onclick="return confirmSyncUpdate()" class="btn btn-warning btn-sm menu-item">
+                        <i class="fas fa-rotate"></i> Sync ລາຄາ
+                    </a>
+                    <a href="build_price_cache.php" target="_blank" class="btn btn-outline-primary btn-sm menu-item">
+                        <i class="fas fa-database"></i> Rebuild Cache
+                    </a>
+                    <a href="update_log.txt" target="_blank" class="btn btn-outline-dark btn-sm menu-item">
+                        <i class="fas fa-file-lines"></i> Update Log
+                    </a>
+                    <a href="get_prices.php?game=<?php echo rawurlencode($gameNames[0] ?? ''); ?>" target="_blank" class="btn btn-outline-success btn-sm menu-item">
+                        <i class="fas fa-plug"></i> Test API
+                    </a>
+                </div>
+
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-8">
+                        <select id="gameJump" class="form-select form-select-sm">
+                            <option value="">-- ເລືອກເກມເພື່ອໄປຫາ card --</option>
+                            <?php foreach ($gameNames as $name): ?>
+                                <option value="<?php echo htmlspecialchars(strtolower($name), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button class="btn btn-primary btn-sm" onclick="jumpToGame()"><i class="fas fa-location-arrow"></i> ໄປຫາເກມ</button>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted mb-1">Transfer % (ສ່ວນທີ 1)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="transferPercentInput" value="<?php echo $transfer_percent; ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted mb-1">Card % (ສ່ວນທີ 2)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="cardPercentInput" value="<?php echo $card_percent; ?>">
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button class="btn btn-success btn-sm" id="savePricingBtn" onclick="savePricingPercent()">
+                            <i class="fas fa-sliders"></i> ບັນທຶກ %
+                        </button>
+                    </div>
+                </div>
+                <div class="small mt-2" id="pricingStatus"></div>
+            </div>
+        </div>
+
         <div class="row justify-content-center mb-4">
             <div class="col-md-6">
                 <div class="input-group shadow-sm">
@@ -222,6 +287,62 @@ $card_percent = $pricingCfg['card_percent'];
             let icon = btn.querySelector('i');
             icon.className = 'fas fa-check text-success';
             setTimeout(() => icon.className = 'far fa-copy', 1500);
+        }
+
+        function jumpToGame() {
+            const selected = document.getElementById('gameJump').value;
+            if (!selected) {
+                return;
+            }
+
+            const cards = Array.from(document.querySelectorAll('.game-card'));
+            const target = cards.find(card => card.getAttribute('data-name') === selected);
+
+            if (!target) {
+                return;
+            }
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.classList.add('focus-target');
+            setTimeout(() => target.classList.remove('focus-target'), 1800);
+        }
+
+        function setPricingStatus(message, type = 'muted') {
+            const statusEl = document.getElementById('pricingStatus');
+            statusEl.className = 'small mt-2 text-' + type;
+            statusEl.textContent = message;
+        }
+
+        function savePricingPercent() {
+            const transferInput = document.getElementById('transferPercentInput');
+            const cardInput = document.getElementById('cardPercentInput');
+            const saveBtn = document.getElementById('savePricingBtn');
+            const transferPercent = transferInput.value;
+            const cardPercent = cardInput.value;
+
+            saveBtn.disabled = true;
+            setPricingStatus('ກຳລັງບັນທຶກຄ່າ % ແລະ rebuild cache...', 'muted');
+
+            fetch('update_pricing.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `transfer_percent=${encodeURIComponent(transferPercent)}&card_percent=${encodeURIComponent(cardPercent)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    setPricingStatus(`ບັນທຶກສຳເລັດ: Transfer ${data.transfer_percent}% | Card ${data.card_percent}% | ${data.game_count} ເກມ`, 'success');
+                    setTimeout(() => window.location.reload(), 900);
+                } else {
+                    setPricingStatus('ບັນທຶກບໍ່ສຳເລັດ: ' + (data.message || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(err => {
+                setPricingStatus('Error: ' + err, 'danger');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+            });
         }
 
         function setStatus(modalId, message, type = 'muted') {
