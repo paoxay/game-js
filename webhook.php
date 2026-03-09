@@ -1,19 +1,10 @@
 <?php
+require_once __DIR__ . '/config.php';
 // ==================================================================
 // 1. ການຕັ້ງຄ່າລະບົບ (CONFIG) - ແກ້ໄຂບ່ອນນີ້!
 // ==================================================================
-
-// 👇 1.1 ໃສ່ Page Access Token (ລະຫັດຍາວໆຈາກ Facebook)
-define('PAGE_ACCESS_TOKEN', 'EAAWFrT6Oru0BQRKFs9vRntsFlSHgX0FFTZAcR8LrZBP3dxFmUGXCnAkjAgqppxkXbaR3IR3FyAjmXnR7hQ4xNhPCqxXx5mypYGEEQXhfK7LLMvf4wVxUF9so0QJSU08jcJYm7HQrsKyQtxAR9hnqhIpSF7lNQy4ZAV2p4H1KYn2YmR5fM1G5pSAuiV45XbsUfJiqAZDZD'); 
-
-// 👇 1.2 ໃສ່ Verify Token (ລະຫັດຢືນຢັນທີ່ເຈົ້າຕັ້ງໃນ Facebook Webhooks)
-define('VERIFY_TOKEN', 'my_secret_password');
-
-// 👇 1.3 ຕັ້ງຄ່າ Database (ຂອງ VPS ເຈົ້າ)
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'ppshop-js');
-define('DB_USER', 'root');
-define('DB_PASS', 'YOUR_DB_PASSWORD_HERE'); // ⚠️ ຢ່າລືມໃສ່ລະຫັດ MySQL
+$cfg = app_cfg();
+$fbCfg = $cfg['facebook'];
 
 
 // ==================================================================
@@ -38,7 +29,7 @@ if (!empty($inputJSON)) {
 // ສ່ວນນີ້ທຳງານຕອນເຈົ້າກົດປຸ່ມ "Verify and Save" ໃນ Facebook
 
 if (isset($_GET['hub_mode']) && isset($_GET['hub_verify_token'])) {
-    if ($_GET['hub_mode'] === 'subscribe' && $_GET['hub_verify_token'] === VERIFY_TOKEN) {
+    if ($_GET['hub_mode'] === 'subscribe' && $_GET['hub_verify_token'] === $fbCfg['verify_token']) {
         http_response_code(200);
         echo $_GET['hub_challenge'];
         exit;
@@ -72,8 +63,7 @@ if (isset($input['entry'][0]['messaging'][0]['message']['text'])) {
 function processMessage($senderId, $text) {
     // A. ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ
     try {
-        $pdo = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4", DB_USER, DB_PASS);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = app_db_pdo();
     } catch (PDOException $e) {
         sendMessage($senderId, "❌ ເກີດຂໍ້ຜິດພາດໃນການເຊື່ອມຕໍ່ຖານຂໍ້ມູນ");
         // ບັນທຶກ Error ລົງ Log
@@ -145,7 +135,8 @@ function processMessage($senderId, $text) {
 }
 
 function sendMessage($recipientId, $messageText) {
-    $url = "https://graph.facebook.com/v16.0/me/messages?access_token=" . PAGE_ACCESS_TOKEN;
+    $fbCfg = app_cfg()['facebook'];
+    $url = "https://graph.facebook.com/v16.0/me/messages?access_token=" . $fbCfg['page_access_token'];
     
     $data = [
         'recipient' => ['id' => $recipientId],

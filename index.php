@@ -1,9 +1,8 @@
 <?php
+require_once __DIR__ . '/config.php';
 // 1. ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ
-$host = 'localhost'; $dbname = 'ppshop-js'; $username = 'root'; $password = ''; // ⚠️ ແກ້ໄຂ DB
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = app_db_pdo();
 } catch (PDOException $e) { die("DB Error: " . $e->getMessage()); }
 
 // 2. ດຶງຂໍ້ມູນ
@@ -45,6 +44,7 @@ $percent_add = 60;
         .btn-circle { border-radius: 50px; }
         .modal-backdrop { z-index: 1040 !important; }
         .modal { z-index: 1050 !important; }
+        .save-status { min-height: 20px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -55,6 +55,15 @@ $percent_add = 60;
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <a href="auto_update.php" class="btn btn-warning btn-sm btn-circle px-3 fw-bold" target="_blank" onclick="return confirmSyncUpdate()">
                     <i class="fas fa-rotate"></i> ຊິ້ງລາຄາອັບເດດ
+                </a>
+                <a href="exports/price_knowledge.md" class="btn btn-light btn-sm btn-circle px-3 fw-bold" target="_blank">
+                    <i class="fas fa-file-lines"></i> MD
+                </a>
+                <a href="exports/price_knowledge.txt" class="btn btn-light btn-sm btn-circle px-3 fw-bold" target="_blank">
+                    <i class="fas fa-file-alt"></i> TXT
+                </a>
+                <a href="exports/price_knowledge.html" class="btn btn-light btn-sm btn-circle px-3 fw-bold" target="_blank">
+                    <i class="fas fa-globe"></i> HTML
                 </a>
                 <span class="badge bg-white text-primary rounded-pill"><?php echo $totalGames; ?> ເກມ</span>
             </div>
@@ -136,14 +145,18 @@ $percent_add = 60;
                     </div>
                 </div>
 
-                <div class="modal fade" id="<?php echo $modalID; ?>" tabindex="-1" aria-hidden="true">
+                <div class="modal fade" id="<?php echo $modalID; ?>" tabindex="-1" aria-hidden="true" data-game-name="<?php echo htmlspecialchars($gameName, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="modal-dialog modal-lg modal-dialog-scrollable">
                         <div class="modal-content">
                             <div class="modal-header bg-light">
                                 <h5 class="modal-title text-primary"><i class="fas fa-edit"></i> ແກ້ໄຂ: <?php echo $gameName; ?></h5>
+                                <button type="button" class="btn btn-success btn-sm btn-circle px-3 me-2" onclick="saveAllNames('<?php echo $modalID; ?>')">
+                                    <i class="fas fa-floppy-disk"></i> Save All
+                                </button>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body bg-white">
+                                <div class="save-status text-muted mb-2" id="status-<?php echo $modalID; ?>"></div>
                                 <div class="table-responsive">
                                     <table class="table table-borderless align-middle">
                                         <thead class="table-light">
@@ -160,12 +173,13 @@ $percent_add = 60;
                                                 <td>
                                                     <input type="text" class="form-control form-control-sm" 
                                                         id="input-<?php echo $pkg['id']; ?>" 
+                                                        data-package-id="<?php echo $pkg['id']; ?>"
                                                         value="<?php echo $pkg['custom_name']; ?>" 
                                                         placeholder="ຕົວຢ່າງ: 100 💎"
                                                         onkeydown="if(event.key === 'Enter') saveName(<?php echo $pkg['id']; ?>)">
                                                 </td>
                                                 <td class="text-center">
-                                                    <button class="btn btn-sm btn-primary btn-circle" onclick="saveName(<?php echo $pkg['id']; ?>)">
+                                                    <button class="btn btn-sm btn-primary btn-circle save-single-btn" onclick="saveName(<?php echo $pkg['id']; ?>)">
                                                         <i class="fas fa-save"></i>
                                                     </button>
                                                 </td>
@@ -176,6 +190,7 @@ $percent_add = 60;
                                 </div>
                             </div>
                             <div class="modal-footer">
+                                <button type="button" class="btn btn-success btn-sm" onclick="saveAllNames('<?php echo $modalID; ?>')">Save All</button>
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ປິດ</button>
                             </div>
                         </div>
@@ -206,13 +221,63 @@ $percent_add = 60;
             setTimeout(() => icon.className = 'far fa-copy', 1500);
         }
 
+        function setStatus(modalId, message, type = 'muted') {
+            const status = document.getElementById('status-' + modalId);
+            if (!status) {
+                return;
+            }
+
+            status.className = 'save-status mb-2 text-' + type;
+            status.textContent = message;
+        }
+
+        function getModalIdFromElement(element) {
+            const modal = element.closest('.modal');
+            return modal ? modal.id : null;
+        }
+
+        function setButtonLoading(button, isLoading) {
+            const icon = button.querySelector('i');
+            if (!icon) {
+                return;
+            }
+
+            if (isLoading) {
+                button.disabled = true;
+                icon.className = 'fas fa-spinner fa-spin';
+                return;
+            }
+
+            button.disabled = false;
+            icon.className = 'fas fa-save';
+        }
+
+        function markButtonSuccess(button) {
+            const icon = button.querySelector('i');
+            if (!icon) {
+                return;
+            }
+
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-success');
+            icon.className = 'fas fa-check';
+
+            setTimeout(() => {
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+                icon.className = 'fas fa-save';
+                button.disabled = false;
+            }, 1200);
+        }
+
         function saveName(id) {
             const input = document.getElementById('input-' + id);
             const val = input.value;
             const btn = input.parentElement.nextElementSibling.querySelector('button');
-            const icon = btn.querySelector('i');
+            const modalId = getModalIdFromElement(input);
 
-            icon.className = 'fas fa-spinner fa-spin'; 
+            setButtonLoading(btn, true);
+            setStatus(modalId, 'ກຳລັງບັນທຶກ...', 'muted');
             
             fetch('save_name.php', {
                 method: 'POST',
@@ -222,22 +287,57 @@ $percent_add = 60;
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
-                    btn.classList.replace('btn-primary', 'btn-success');
-                    icon.className = 'fas fa-check';
-                    setTimeout(() => {
-                        btn.classList.replace('btn-success', 'btn-primary');
-                        icon.className = 'fas fa-save';
-                        // ແນະນຳ: Refresh ໜ້າຈໍເພື່ອໃຫ້ຕົວຢ່າງອັບເດດນຳ
-                         location.reload(); 
-                    }, 1000);
+                    markButtonSuccess(btn);
+                    setStatus(modalId, 'ບັນທຶກສຳເລັດ', 'success');
                 } else {
+                    setButtonLoading(btn, false);
                     alert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ!');
-                    icon.className = 'fas fa-save';
+                    setStatus(modalId, 'ບັນທຶກບໍ່ສຳເລັດ', 'danger');
                 }
             })
             .catch(err => {
+                setButtonLoading(btn, false);
                 alert('Error: ' + err);
-                icon.className = 'fas fa-save';
+                setStatus(modalId, 'ບັນທຶກບໍ່ສຳເລັດ', 'danger');
+            });
+        }
+
+        function saveAllNames(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+
+            const inputs = Array.from(modal.querySelectorAll('input[data-package-id]'));
+            const items = inputs.map(input => ({
+                id: Number(input.dataset.packageId),
+                custom_name: input.value
+            }));
+
+            const buttons = modal.querySelectorAll('.save-single-btn');
+            buttons.forEach(button => setButtonLoading(button, true));
+            setStatus(modalId, 'ກຳລັງບັນທຶກທັງໝົດ...', 'muted');
+
+            fetch('save_name.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    buttons.forEach(button => markButtonSuccess(button));
+                    setStatus(modalId, `ບັນທຶກສຳເລັດ ${data.updated || items.length} ລາຍການ`, 'success');
+                } else {
+                    buttons.forEach(button => setButtonLoading(button, false));
+                    setStatus(modalId, 'ບັນທຶກທັງໝົດບໍ່ສຳເລັດ', 'danger');
+                    alert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກທັງໝົດ!');
+                }
+            })
+            .catch(err => {
+                buttons.forEach(button => setButtonLoading(button, false));
+                setStatus(modalId, 'ບັນທຶກທັງໝົດບໍ່ສຳເລັດ', 'danger');
+                alert('Error: ' + err);
             });
         }
     </script>

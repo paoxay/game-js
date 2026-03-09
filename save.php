@@ -1,15 +1,10 @@
 <?php
+require_once __DIR__ . '/config.php';
 // ---------------------------------------------------------
 // 1. ຕັ້ງຄ່າການເຊື່ອມຕໍ່ຖານຂໍ້ມູນ (Database Connection)
 // ---------------------------------------------------------
-$host = 'localhost';
-$dbname = 'ppshop-js'; // ⚠️ ໃສ່ຊື່ DB ຂອງເຈົ້າ
-$username = 'root';       // ⚠️ ໃສ່ User DB
-$password = '';           // ⚠️ ໃສ່ Pass DB
-
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = app_db_pdo();
 } catch (PDOException $e) {
     die("DB Connection failed: " . $e->getMessage());
 }
@@ -18,20 +13,21 @@ try {
 // 2. ຟັງຊັນຍິງ API (ໃຊ້ຊ້ຳໄດ້)
 // ---------------------------------------------------------
 function callAPI($url) {
-    $token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0NDYzNjVjNTJmMGZiMDU3YmU1ZDkxZCIsImltYWdlIjoiMmI0MWFjNjQtMzM2ZS00YmQwLWFmMjMtY2MxN2Y2Nzc1ODBkLnBuZyIsInVzZXJOYW1lIjoicGFveGFpMTk5NiIsImZ1bGxOYW1lIjoi4LuA4Lqb4Lq74LqyIOC7hOC6iuC6jeC6sOC6quC6suC6mSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2NDcxOTAxN30.X_YRHqog9VwtQKTX6Py3Oiv2Dh-9dTNkj4LhpoYNKtM'; // ⚠️ ຢ່າລືມອັບເດດ Token
-    $encrypted = 'U2FsdGVkX1/Ey7TJrDxfjsnKiwtgAcinmtpZVeDYWubuMj7u5Z1SegOE02fq1x5j'; // ⚠️ ຢ່າລືມອັບເດດ X-Encrypted
+    $ppshopCfg = app_cfg()['ppshop'];
+    $token = $ppshopCfg['token'];
+    $encrypted = $ppshopCfg['encrypted'];
 
     $curl = curl_init();
     curl_setopt_array($curl, array(
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_TIMEOUT => $ppshopCfg['timeout'],
         CURLOPT_HTTPHEADER => array(
             'accept: application/json',
             'authorization: Bearer ' . $token,
             'x-encrypted: ' . $encrypted,
-            'origin: https://admin.ppshope.com',
-            'referer: https://admin.ppshope.com/'
+            'origin: ' . $ppshopCfg['origin'],
+            'referer: ' . $ppshopCfg['referer']
         ),
     ));
     $response = curl_exec($curl);

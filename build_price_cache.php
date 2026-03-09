@@ -1,19 +1,17 @@
 <?php
 require_once __DIR__ . '/price_cache_helper.php';
-
-$host = 'localhost';
-$dbname = 'ppshop-js';
-$username = 'root';
-$password = '';
+require_once __DIR__ . '/config.php';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = app_db_pdo();
 
     $cacheData = rebuildPriceCache($pdo, __DIR__ . '/price_cache.json');
 
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Cache rebuilt successfully. Games: ' . ($cacheData['game_count'] ?? 0);
+    echo 'Cache rebuilt successfully. Games: ' . ($cacheData['game_count'] ?? 0) . PHP_EOL;
+    echo 'HTML: ' . ($cacheData['exports']['html'] ?? 'N/A') . PHP_EOL;
+    echo 'Markdown: ' . ($cacheData['exports']['markdown'] ?? 'N/A') . PHP_EOL;
+    echo 'Text: ' . ($cacheData['exports']['text'] ?? 'N/A');
 } catch (Throwable $exception) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');

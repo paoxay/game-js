@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-03-07T10:29:53+07:00",
+    "generated_at": "2026-03-07T13:12:09+07:00",
     "game_count": 120,
     "games": {
         "riotprepaidcard(th)": {
@@ -1322,5 +1322,11 @@
                 "total_parts": 2
             }
         }
+    },
+    "exports": {
+        "export_dir": "D:\\XXAMPP\\htdocs\\game-api\\exports",
+        "markdown": "D:\\XXAMPP\\htdocs\\game-api\\exports\\price_knowledge.md",
+        "text": "D:\\XXAMPP\\htdocs\\game-api\\exports\\price_knowledge.txt",
+        "html": "D:\\XXAMPP\\htdocs\\game-api\\exports\\price_knowledge.html"
     }
 }

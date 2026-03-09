@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/price_cache_helper.php';
+require_once __DIR__ . '/config.php';
 
 // 1. ຕັ້ງຄ່າ Error ສຳລັບ Production
 ini_set('display_errors', '0');
@@ -69,16 +70,8 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header('Content-Type: application/json; charset=utf-8');
 
-// 2. ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ
-// ⚠️⚠️ ຢ່າລືມໃສ່ລະຫັດຜ່ານ DB ຂອງເຈົ້າຢູ່ບ່ອນນີ້ ⚠️⚠️
-$host = 'localhost';
-$dbname = 'ppshop-js'; 
-$username = 'root';
-$password = ''; 
-
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = app_db_pdo();
 } catch (PDOException $e) {
     apiLog('Database connection failed', ['error' => $e->getMessage()]);
     respondJson([
