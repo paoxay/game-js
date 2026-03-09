@@ -137,7 +137,9 @@ try {
 }
 
 // 5. ປະມວນຜົນຂໍ້ມູນ
-$percent_add = 60;
+$pricingCfg = app_cfg()['pricing'];
+$transferPercent = $pricingCfg['transfer_percent'];
+$cardPercent = $pricingCfg['card_percent'];
 
 if (empty($results)) {
     apiLog('No results found', ['game' => $searchGame]);
@@ -150,7 +152,7 @@ if (empty($results)) {
     ]);
 }
 
-$cacheData = rebuildPriceCache($pdo, $cacheFilePath, $percent_add);
+$cacheData = rebuildPriceCache($pdo, $cacheFilePath, $transferPercent, $cardPercent);
 $cachedEntry = searchPriceCache($cacheData, $searchGame);
 
 if ($cachedEntry) {

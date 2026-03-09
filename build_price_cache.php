@@ -4,8 +4,9 @@ require_once __DIR__ . '/config.php';
 
 try {
     $pdo = app_db_pdo();
+    $pricingCfg = app_cfg()['pricing'];
 
-    $cacheData = rebuildPriceCache($pdo, __DIR__ . '/price_cache.json');
+    $cacheData = rebuildPriceCache($pdo, __DIR__ . '/price_cache.json', $pricingCfg['transfer_percent'], $pricingCfg['card_percent']);
 
     header('Content-Type: text/plain; charset=utf-8');
     echo 'Cache rebuilt successfully. Games: ' . ($cacheData['game_count'] ?? 0) . PHP_EOL;

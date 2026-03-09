@@ -21,8 +21,10 @@ foreach ($results as $row) {
 }
 $totalGames = count($groupedGames);
 
-// ⚙️ ຕັ້ງຄ່າເປີເຊັນບວກເພີ່ມ (ໃຫ້ຕົງກັບ get_prices.php)
-$percent_add = 60; 
+// ⚙️ ຕັ້ງຄ່າເປີເຊັນ (ໃຫ້ຕົງກັບ get_prices.php)
+$pricingCfg = app_cfg()['pricing'];
+$transfer_percent = $pricingCfg['transfer_percent'];
+$card_percent = $pricingCfg['card_percent'];
 ?>
 
 <!DOCTYPE html>
@@ -92,12 +94,13 @@ $percent_add = 60;
                 $msgCard = "";
 
                 foreach($items as $item) {
-                    // 1. ຄຳນວນລາຄາປົກກະຕິ (ປັດເສດ 1000)
-                    $roundedAmount = ceil($item['amount']/1000)*1000;
+                    // 1. ຄຳນວນລາຄາໂອນ (ຕາມ TRANSFER_PERCENT ແລະປັດເສດ 1000)
+                    $rawTransferAmount = $item['amount'] + ($item['amount'] * ($transfer_percent / 100));
+                    $roundedAmount = ceil($rawTransferAmount/1000)*1000;
                     $price = number_format($roundedAmount);
                     
-                    // 2. ຄຳນວນລາຄາບັດ (+60%)
-                    $rawCardAmount = $roundedAmount + ($roundedAmount * ($percent_add / 100));
+                    // 2. ຄຳນວນລາຄາບັດ (ຕາມ CARD_PERCENT)
+                    $rawCardAmount = $roundedAmount + ($roundedAmount * ($card_percent / 100));
                     
                     // 🔥 ແກ້ໄຂ: ປັດເສດລາຄາບັດໃຫ້ເຕັມ 1000 (ຄືກັບ get_prices.php)
                     $cardAmountRounded = ceil($rawCardAmount / 10000) * 10000;

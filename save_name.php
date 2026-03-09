@@ -6,6 +6,7 @@ header('Content-Type: application/json');
 
 try {
     $pdo = app_db_pdo();
+    $pricingCfg = app_cfg()['pricing'];
 
     $rawInput = file_get_contents('php://input');
     $jsonInput = json_decode($rawInput, true);
@@ -29,7 +30,7 @@ try {
             }
         }
 
-        rebuildPriceCache($pdo, __DIR__ . '/price_cache.json');
+        rebuildPriceCache($pdo, __DIR__ . '/price_cache.json', $pricingCfg['transfer_percent'], $pricingCfg['card_percent']);
         echo json_encode(["status" => "success", "mode" => "bulk", "updated" => $updated]);
         exit;
     }
@@ -47,7 +48,7 @@ try {
     }
 
     if ($stmt->execute([$val, $id])) {
-        rebuildPriceCache($pdo, __DIR__ . '/price_cache.json');
+        rebuildPriceCache($pdo, __DIR__ . '/price_cache.json', $pricingCfg['transfer_percent'], $pricingCfg['card_percent']);
         echo json_encode(["status" => "success", "mode" => "single", "id" => $id]);
     } else {
         echo json_encode(["status" => "error"]);

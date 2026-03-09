@@ -81,6 +81,10 @@ function app_cfg() {
             'page_access_token' => app_env('FB_PAGE_ACCESS_TOKEN', ''),
             'verify_token' => app_env('FB_VERIFY_TOKEN', ''),
         ],
+        'pricing' => [
+            'transfer_percent' => (float) app_env('TRANSFER_PERCENT', 0),
+            'card_percent' => (float) app_env('CARD_PERCENT', 60),
+        ],
     ];
 
     return $cfg;

@@ -6,7 +6,7 @@ function normalizeGameSearchTerm($value) {
     return mb_strtolower($value, 'UTF-8');
 }
 
-function buildPriceMessageParts(array $rows, $percentAdd = 60) {
+function buildPriceMessageParts(array $rows, $transferPercent = 0, $cardPercent = 60) {
     $groupedData = [];
     $groupedDataCard = [];
 
@@ -14,10 +14,11 @@ function buildPriceMessageParts(array $rows, $percentAdd = 60) {
         $gameName = trim($row['game_name']);
         $displayName = !empty($row['custom_name']) ? $row['custom_name'] : $row['package_name'];
 
-        $roundedAmount = ceil(((float) $row['amount']) / 1000) * 1000;
+        $rawTransferAmount = ((float) $row['amount']) + (((float) $row['amount']) * ($transferPercent / 100));
+        $roundedAmount = ceil($rawTransferAmount / 1000) * 1000;
         $price = number_format($roundedAmount);
 
-        $rawCardAmount = $roundedAmount + ($roundedAmount * ($percentAdd / 100));
+        $rawCardAmount = $roundedAmount + ($roundedAmount * ($cardPercent / 100));
         $cardAmountRounded = ceil($rawCardAmount / 10000) * 10000;
         $cardPrice = number_format($cardAmountRounded);
 
@@ -56,7 +57,7 @@ function buildPriceMessageParts(array $rows, $percentAdd = 60) {
     ];
 }
 
-function buildPriceCacheData(PDO $pdo, $percentAdd = 60) {
+function buildPriceCacheData(PDO $pdo, $transferPercent = 0, $cardPercent = 60) {
     $stmt = $pdo->query("SELECT game_name, package_name, custom_name, amount, sort_order FROM game_packages ORDER BY game_name ASC, sort_order ASC, amount ASC");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -72,7 +73,7 @@ function buildPriceCacheData(PDO $pdo, $percentAdd = 60) {
     $games = [];
     foreach ($groupedByGame as $gameName => $gameRows) {
         $normalized = normalizeGameSearchTerm($gameName);
-        $messages = buildPriceMessageParts($gameRows, $percentAdd);
+        $messages = buildPriceMessageParts($gameRows, $transferPercent, $cardPercent);
         $games[$normalized] = [
             'game_name' => $gameName,
             'normalized_game' => $normalized,
@@ -259,8 +260,8 @@ function writePriceKnowledgeExports($baseDir, array $cacheData) {
     ];
 }
 
-function rebuildPriceCache(PDO $pdo, $filePath, $percentAdd = 60) {
-    $cacheData = buildPriceCacheData($pdo, $percentAdd);
+function rebuildPriceCache(PDO $pdo, $filePath, $transferPercent = 0, $cardPercent = 60) {
+    $cacheData = buildPriceCacheData($pdo, $transferPercent, $cardPercent);
     writePriceCacheFile($filePath, $cacheData);
     $cacheData['exports'] = writePriceKnowledgeExports(dirname($filePath), $cacheData);
     writePriceCacheFile($filePath, $cacheData);

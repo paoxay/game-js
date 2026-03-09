@@ -200,7 +200,13 @@ if (isset($gamesList['data'])) {
         );
     }
 
-    $cacheData = rebuildPriceCache($pdo, __DIR__ . '/price_cache.json');
+    $pricingCfg = app_cfg()['pricing'];
+    $cacheData = rebuildPriceCache(
+        $pdo,
+        __DIR__ . '/price_cache.json',
+        $pricingCfg['transfer_percent'],
+        $pricingCfg['card_percent']
+    );
     sendMsg("🧠 ສ້າງ cache ລາຄາສຳເລັດ: " . ($cacheData['game_count'] ?? 0) . " ເກມ", "success");
     sendMsg("✅ ດຳເນີນການສຳເລັດ! ກວດສອບ: $totalChecked, ອັບເດດ: $updatedCount, ໃໝ່: $insertedCount, ລຶບ: $removedCount", "success");
 
